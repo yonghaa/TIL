@@ -1,0 +1,215 @@
+```python
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+```
+```python
+train=pd.read_csv('titanic/train.csv') 
+#타이타닉 파일불러옴
+test=pd.read_csv('titanic/test.csv')#
+```
+```python
+train.info() # 트레인파일 정보
+train.shape # 몇행 몇열인지
+train.columns # columns열 목록 
+
+train.isnull().sum() 
+# 열이 많을 경우에 결측값 확인하는법 isnull
+
+train['Sex'].values_counts() #'Sex'열 카운트
+
+sns.countplot(x='Sex', data=train) #씨본 막대차트
+```
+```python
+train['Died']=1-train['Survived']
+train['Died']
+#피쳐엔지니어링 기존에 있던 데이터로 새로운 데이터 추출
+```
+```python
+train.groupby('Sex').agg('sum')[['Survived', 'Died']].plot(kind='bar', figsize=(10,5), stacked=True) #agg()=>적용을해라
+train.groupby('Sex').agg('mean')[['Survived','Died']].plot(kind='bar', figsiize=(10,5), stacked=True)
+#이중 겹으로 스택된 바그래프
+```
+```python
+#히스토그램?
+plt.hist(train[train['Survived']==1]['Fare'])
+plt.hist(train[train['Survived']==0]['Fare'])
+plt.hist([train[train['Survived']==1]['Fare'],train[train['Survived']==0]['Fare']], stacked=True, 
+         label=['Survived','Dead'], bins=50)
+plt.xlabel('Fare')
+plt.ylabel('Number of passengers')
+plt.legend()
+train2=pd.read_csv("titanic/train.csv").set_index('PassengerId') #특정열을 행 인덱스로 해줌
+train2
+test2=pd.read_csv("titanic/test.csv").set_index('PassengerId')
+test2
+df=pd.concat([train2,test2]) #train2와 test2 concat으로 합쳐줌
+df.style.background_gradient(cmap='Blues') #데이터 출력할때 데이터구분이 용이하다
+```
+```python
+pip install missingno
+import missingno as msno
+msno.bar(df, color=(0.2,0.4,0.6))
+test['Fare'].isnull().sum()
+# 운임의 중위수로 결측값을 대체
+df['Fare'].isnull().sum()
+df['Fare'].median()
+df[df.Pclass == 3]['Fare'].median() #Pclass가 3인 Fare열에대해서 중위수
+df['Fare'].fillna(df['Fare'].median(), inplace=True)
+df['Fare'].isnull().sum()
+df['Title']=df['Name'].str.extract("([A-Za-z]+)\.")
+fig, ax=plt.subplots(1,2, figsize=(18,8))
+fig, ax=plt.subplots(1,2, figsize=(18,8))
+
+train['Sex'].value_counts().plot.bar(color='skyblue', ax=ax[0]) #판다스에있는 bar함수
+
+sns.countplot(x='Sex', hue='Survived', data=train, ax=ax[1]) #씨본
+
+ax[0].set_title("num of passengers by sex")
+ax[1].set_title("survived vs dead")
+```
+```python
+pd.crosstab([train['Sex'], train['Survived']], train['Pclass'],
+            margins=True).style.background_gradient(cmap='summer_r')
+train['Name']
+titles=set()
+for name in train['Name']:
+    titles.add(name.split(",")[1].split(".")[0].strip())
+    Title_Dictionary = {"Capt": "Officer","Col": "Officer","Major": "Officer",
+                    "Jonkheer": "Royalty","Don": "Royalty","Sir" : "Royalty",
+                    "Dr": "Officer","Rev": "Officer","the Countess":"Royalty",
+                    "Mme": "Mrs","Mlle": "Miss","Ms": "Mrs","Mr" : "Mr","Mrs" : "Mrs",
+                    "Miss" : "Miss","Master" : "Master","Lady" : "Royalty"}
+train['Title']=train.Title.map(Title_Dictionary)
+train
+train['Title'].value_counts()
+
+train['Title']=train['Name'].map(lambda name:name.split(",")[1].split(".")[0].strip())
+#성만 뽑아줌
+
+df1=train.drop(['Name','Ticket', 'Cabin', 'PassengerId','Died'], axis=1)
+df1
+#문자 수치화
+df1.Sex=df1.Sex.map({'female':0, 'male':1})
+df1
+df1.Embarked=df1.Embarked.map({'S':0, 'C':1, 'Q':2, 'nan':'NaN'})
+df1.Title=df1.Title.map({'Mr':0, 'Miss':1, 'Mrs':2,'Master':3,'Officer':4,'Royalty':5})
+
+median_am=df1[df1['Sex']==1]['Age'].median() #남성
+median_aw=df1[df1['Sex']==0]['Age'].median() #여성
+
+#나이 결측값을 대체
+
+df1.loc[(df1['Sex']==0)&(df1['Age'].isnull()), 'Age']=median_aw #여성이면서 나이가 결측값인 경우
+df1.loc[(df1['Sex']==0)&(df1['Age'].isnull())]
+df1.loc[(df1['Sex']==1)&(df1['Age'].isnull()), 'Age']=median_am #남성이면서 나이가 결측값인 경우
+df1.info() #결측값이 없어야 모델링하는데 지장이없다
+df1.dropna(inplace=True)
+df1.info()
+
+# 정규화: 0 <= (각 데이터값 - 최소값) / (최대값-최소값) <= 1
+
+#나이 정규화
+df1.Age=(df1.Age - min(df1.Age)) / (max(df1.Age) - min(df1.Age))
+df1.Fare=(df1.Fare - min(df1.Fare)) / (max(df1.Fare) - min(df1.Fare))
+df1
+df1.describe() #기술통계
+
+"""
+from sklearn.preprocessing import MinMaxScaler
+scaler=MinMaxScaler()
+scaler.fit_transform(df1[:])
+"""
+from sklearn.model_selection import train_test_split
+
+# df1에는 train데이터가 저장, test 데이터는 따로 있음
+# df1의 train데이터를 8:2의 비율로 분리
+xtrain, xtest, ytrain, ytest = train_test_split(df1.drop(['Survived'], axis=1), 
+                                                df1.Survived, test_size=0.2, 
+                                                random_state=41, stratify=df1.Survived)
+
+
+
+xtrain.shape
+ytrain
+xtest #validation 검증데이터
+ytest
+
+ytrain.value_counts() #440:271
+
+ytest.value_counts() # 109:69
+#층화추출(stratified) 계층별로 동일한 비율에 따라 추출하겠다
+
+# 생존:60, 사망:40
+#         8:2의 비율로 나누려고한다
+        
+#         80:20
+#     train = 생존:60+사망:20  =>  48  + 32
+#     valid = 사망:20
+#이렇게되면안된다 그러므로 그냥 추출하면안되고 층화추출해줘야함
+
+df1.drop(['Survived'], axis=1)
+from sklearn.linear_model import LogisticRegression
+clf=LogisticRegression()
+clf.fit(xtrain,ytrain) #모델링
+xtest
+clf.predict(xtest)
+from sklearn.metrics import accuracy_score, confusion_matrix
+accuracy_score(ytest, clf.predict(xtest))
+confusion_matrix(ytest, clf.predict(xtest)) #confusion_matrix 혼돈행렬
+
+y_true = [0, 1, 2, 0, 1, 2, 0, 1, 2]
+y_pred = [0, 0, 2, 0, 2, 2, 1, 1, 2]
+
+confusion_matrix(y_true, y_pred)
+
+sns.heatmap(confusion_matrix(y_true, y_pred), annot=True, cmap='Blues')
+plt.xlabel('pred')
+plt.ylabel('true')
+
+titles = set()
+for name in test['Name']:
+    titles.add(name.split(',')[1].split('.')[0].strip())
+print(titles)
+
+test['Title'] = test['Name'].map(lambda name:name.split(',')[1].split('.')[0].strip())
+test['Title'] = test.Title.map(Title_Dictionary)
+test.head()
+
+df2=test.drop(['PassengerId','Name','Ticket','Cabin'], axis=1)
+
+df2.Sex=df2.Sex.map({'female':0, 'male':1})
+df2.Embarked=df2.Embarked.map({'S':0, 'C':1, 'Q':2,'nan':'nan'})
+df2.Title=df2.Title.map({'Mr':0, 'Miss':1, 'Mrs':2,'Master':3,'Officer':4,'Royalty':5})
+df2.head()
+
+df2.isnull().sum()
+
+median_age_men2=df2[df2['Sex']==1]['Age'].median()
+median_age_women2=df2[df2['Sex']==0]['Age'].median()
+
+df2.loc[(df2.Age.isnull()) & (df2['Sex']==0),'Age']=median_age_women2
+df2.loc[(df2.Age.isnull()) & (df2['Sex']==1),'Age']=median_age_men2
+
+df2['Fare']=df2['Fare'].fillna(df2['Fare'].median())
+
+df2[df2.Title.isnull()]
+
+df2=df2.fillna(2)
+
+df2.Age = (df2.Age-min(df2.Age))/(max(df2.Age)-min(df2.Age))
+df2.Fare = (df2.Fare-min(df2.Fare))/(max(df2.Fare)-min(df2.Fare))
+
+pred=clf.predict(df2)
+pred
+
+submission=pd.DataFrame({
+    'PassengerId': test['PassengerId'],
+    'Survived':pred    
+})
+
+submission.to_csv("submission.csv", index=False)
+
+#인덱스False로하고 submission파일로 저장함
+```
