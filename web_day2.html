@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8">
+  <head>
+    <title> 윤년과 평년 구분하기 </title>
+    <script>
+      const rawInput = prompt('년도를 입력해주세요.')
+      const year = Number(rawInput)
+
+      if ((year % 4 == 0 && year % 100 !=0) || year % 400 == 0)
+          {alert(`${year}년은 윤년입니다.`)}
+
+      else {alert(`${year}년은 평년입니다.`)}
+    </script>
+  </head>
+  <body></body>
+</html>
